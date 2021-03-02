@@ -1,0 +1,48 @@
+#! /bin/bash
+
+USER="root"
+PASS="mysql"
+basename=$(basename $1 '.sql')
+echo "digraph Enron {"
+echo " graph [ overlap = scale , splines = true , rankdir = LR ];"
+#importe le fichier sql dans mysql
+mysql -n $basename < $1 
+
+
+if [ -z "$2" ]
+  then
+
+	recup_all_mail=$(mysql $basename -se "SELECT DISTINCT mail from users")
+	recup_all_array=($recup_all_mail)
+	for i in "${!recup_all_array[@]}"
+	do
+		echo "\"${recup_all_array[i]}\" -> {"
+		recup_conv_id=$(mysql $basename -se "SELECT DISTINCT user_to FROM exchanges INNER jOIN users ON exchanges.user_from=users.id WHERE users.mail='${recup_all_array[i]}'" )
+		recup_conv_array=($recup_conv_id)
+		for j in "${!recup_conv_array[@]}"
+		do
+			recup_conv_mail=$(mysql $basename -se "SELECT mail from users WHERE id=${recup_conv_array[j]}")
+			echo "\"$recup_conv_mail\" "
+		done
+		echo "}}"
+	done
+else
+
+
+
+
+#Recupere les ids des personnes en contact avec la personne en parametre
+recup_id=$(mysql $basename  -se "SELECT DISTINCT user_to from exchanges INNER JOIN users ON exchanges.user_from=users.id  WHERE users.mail='$2'")
+
+# Redefinie la variable d'ids en tableau grace aux parenthese
+recup_id_array=($recup_id)
+
+echo  "\"$2\" -> {"
+for index in "${!recup_id_array[@]}"
+do
+	recup_mail=$(mysql $basename -se "SELECT mail from users WHERE id=${recup_id_array[index]}")
+	echo "\"$recup_mail\" "
+
+done
+echo "}}";
+fi
